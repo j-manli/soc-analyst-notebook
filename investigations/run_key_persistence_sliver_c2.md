@@ -180,7 +180,7 @@ This query confirms **two executions** of `WindowsTelemetryService.exe` — one 
 
 > I tested both methods during this simulation so you’ll see evidence of each.
 > 👉 For full context on the **Startup Folder** technique seen below, 
-see the [startup_folder_persistence_sliver_c2.md](https://github.com/j-manli/soc-analyst-notebook/investigations/startup_folder_persistence_sliver_c2.md) writeup.
+see the [startup_folder_persistence_sliver_c2.md](https://github.com/j-manli/soc-analyst-notebook/blob/main/investigations/startup_folder_persistence_sliver_c2.md) writeup.
 
 <img width="1708" height="435" alt="pivoting_did_executable_run_kql" src="https://github.com/user-attachments/assets/da45b3ff-067d-4d6c-a327-e5ca53ba7e54" />  
 
