@@ -157,6 +157,29 @@ I’m looking for browser activity tied to the phishing domain, process executio
 > [!TIP]
 > This is usually the section that changes the case from “email triage” to “incident response.” Once user interaction is confirmed, the workflow often needs to widen *fast*.
 
+### Common Pivots
+
+If the case starts moving beyond the email itself, I want to pivot in a way that matches the evidence instead of chasing everything at once.
+
+A few common pivots that matter in phishing cases:
+
+- **Identity activity**  
+  If credentials may have been submitted, I want to review sign-in activity, MFA prompts, session changes, failed logons, impossible travel, or anything else that suggests account misuse.
+
+- **Mailbox activity**  
+  If account compromise is suspected, I want to check for mailbox rules, forwarding behavior, deleted messages, or other changes that may show follow-on abuse.
+
+- **Endpoint activity**  
+  If an attachment was opened or a link led to a download, I want to look for process execution, child processes, browser activity, archive extraction, persistence, and outbound connections.
+
+- **Delivery scope**  
+  If the email was malicious, I want to know who else received it. Did the same message reached multiple users?
+
+- **Infrastructure reuse**  
+  If a URL, sender, domain, or hash is confirmed suspicious, I want to check whether the same artifacts show up elsewhere in the environment or in related cases.
+
+The point here is to follow the evidence far enough to understand whether the problem stayed in the inbox or moved somewhere else.
+
 ## 7. Determine Containment or Escalation Needs
 
 The next step depends on what happened. If the message appears to be delivery only, the focus may stay on blocking, scoping, and removing similar messages. 
