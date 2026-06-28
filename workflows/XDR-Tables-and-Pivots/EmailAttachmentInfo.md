@@ -33,14 +33,20 @@ Use `EmailAttachmentInfo` when the alert or investigation involves:
 * Sender patterns tied to malicious attachments
 * Malware families or threat names delivered through email
 --- 
-## Starter KQL
-```kql
+## Kickoff KQL query
+
+Use this as your first-pass query for `EmailAttachmentInfo`.
+
+Fill in whichever alert artifact you have and leave the others blank.
+
+```kql id="d4rjpt"
 let lookback = 7d;
 let alertNetworkMessageId = "";
 let alertSHA256 = "";
 let alertSender = "";
 let alertRecipient = "";
 let alertFileName = "";
+
 EmailAttachmentInfo
 | where Timestamp >= ago(lookback)
 | where isempty(alertNetworkMessageId) or NetworkMessageId == alertNetworkMessageId
@@ -67,12 +73,32 @@ EmailAttachmentInfo
 | order by Timestamp desc
 | take 200
 ```
-> fill in at least one of these, from most to least priority:
-`alertNetworkMessageId`
-`alertSHA256`
-`alertRecipient`
-`alertSender`
-`alertFileName`
+
+### Incident write-up query
+
+Use this shorter version when you need to paste the KQL you used into a Sentinel incident comment.
+
+Prioritize `NetworkMessageId` when available because it ties the attachment back to the exact email message. If `NetworkMessageId` is not available, use `SHA256` next because it can show where the same attachment appeared across multiple emails. If neither is available, adjust the `where` line to use another alert artifact such as `SenderFromAddress`, `RecipientEmailAddress`, or `FileName`.
+
+```kql id="9j9itx"
+EmailAttachmentInfo
+| where Timestamp >= ago(7d)
+| where NetworkMessageId == "<NetworkMessageId>"
+| project-reorder Timestamp, NetworkMessageId, SenderFromAddress, SenderDisplayName, RecipientEmailAddress, FileName, FileType, SHA256, FileSize, ThreatTypes, ThreatNames, DetectionMethods, SenderObjectId, RecipientObjectId, ReportId
+| order by Timestamp desc
+```
+
+Alternative `where` lines you can swap in depending on the alert artifact:
+
+```kql id="33qvqf"
+| where SHA256 =~ "<SHA256>"
+| where SenderFromAddress =~ "<sender@example.com>"
+| where RecipientEmailAddress =~ "<user@example.com>"
+| where FileName =~ "<filename.ext>"
+| where FileName contains "<filename keyword>"
+| where ThreatNames contains "<threat name>"
+```
+
 ---
 
 ## Do not use this table for
