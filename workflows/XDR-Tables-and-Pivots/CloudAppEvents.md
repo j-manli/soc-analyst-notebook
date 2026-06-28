@@ -117,7 +117,7 @@ Prioritize `AccountObjectId` or `AccountId` when investigating a specific user. 
 CloudAppEvents
 | where Timestamp >= ago(7d)
 | where AccountId =~ "<user@domain.com>"
-| project-reorder Timestamp, AccountId, AccountObjectId, AccountDisplayName, AccountType, Application, ActionType, ActivityType, IPAddress, IsAnonymousProxy, CountryCode, City, ISP, IPCategory, IsExternalUser, IsAdminOperation, IsImpersonated, ObjectName, ObjectType, ObjectId, ActivityObjects, OAuthAppId, UncommonForUser, LastSeenForUser, DeviceType, OSPlatform, UserAgent, UserAgentTags, AuditSource, SessionData, ReportId, AdditionalFields
+| project-reorder Timestamp, AccountId, AccountObjectId, AccountDisplayName, AccountType, Application, ActionType, ActivityType, IPAddress, IsAnonymousProxy, CountryCode, City, IsExternalUser, IsAdminOperation, ObjectName, ObjectType, ActivityObjects, OAuthAppId, UncommonForUser, LastSeenForUser, ReportId
 | order by Timestamp desc
 ```
 
