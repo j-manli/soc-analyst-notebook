@@ -56,6 +56,7 @@ let alertRecipient = "";
 let alertSenderIP = "";
 let alertSubjectKeyword = "";
 let alertThreatName = "";
+
 EmailEvents
 | where Timestamp >= ago(lookback)
 | where isempty(alertNetworkMessageId) or NetworkMessageId == alertNetworkMessageId
@@ -94,39 +95,33 @@ EmailEvents
 | take 200
 ```
 
-### How to use the kickoff query
+### Incident write-up query
 
-Treat the `let` section as your **alert artifact intake form**.
+Use this shorter version when you need to paste the KQL you used into a Sentinel incident comment.
 
-```text
-Initial alert artifacts:
-- NetworkMessageId:
-- InternetMessageId:
-- EmailClusterId:
-- Sender:
-- Recipient:
-- Sender IP:
-- Subject keyword:
-- Threat name:
-- Lookback period:
+Prioritize `NetworkMessageId` when available because it usually gives the cleanest match to the exact email. If `NetworkMessageId` is not available, adjust the `where` line to use another alert artifact such as `InternetMessageId`, `EmailClusterId`, `SenderFromAddress`, `RecipientEmailAddress`, `SenderIPv4`, `Subject`, or `ThreatNames`.
+
+```kql
+EmailEvents
+| where Timestamp >= ago(7d)
+| where NetworkMessageId == "<NetworkMessageId>"
+| project-reorder Timestamp, NetworkMessageId, EmailDirection, SenderFromAddress, SenderMailFromAddress, SenderDisplayName, SenderIPv4, RecipientEmailAddress, Subject, DeliveryAction, DeliveryLocation, LatestDeliveryAction, LatestDeliveryLocation, ThreatTypes, ThreatNames, DetectionMethods, AuthenticationDetails, EmailClusterId, AttachmentCount, UrlCount, EmailAction, EmailActionPolicy, ReportId
+| order by Timestamp desc
 ```
 
-For a specific alert, try to fill in at least one value.
+Alternative `where` lines you can swap in depending on the alert artifact:
 
-Best starting artifacts:
+```kql
+| where InternetMessageId == "<InternetMessageId>"
+| where EmailClusterId == "<EmailClusterId>"
+| where SenderFromAddress =~ "<sender@example.com>"
+| where SenderMailFromAddress =~ "<sender@example.com>"
+| where RecipientEmailAddress =~ "<user@example.com>"
+| where SenderIPv4 == "<sender IP>"
+| where Subject contains "<subject keyword>"
+| where ThreatNames contains "<threat name>"
+```
 
-| Artifact              | Why it is useful                                                       |
-| --------------------- | ---------------------------------------------------------------------- |
-| `NetworkMessageId`    | Best for finding the exact email inside Microsoft 365 data.            |
-| `InternetMessageId`   | Useful when working from raw message headers or external mail systems. |
-| `EmailClusterId`      | Useful for finding similar emails in the same campaign.                |
-| `alertSender`         | Useful for finding other emails from the same sender.                  |
-| `alertRecipient`      | Useful for checking all suspicious email activity targeting one user.  |
-| `alertSenderIP`       | Useful for tracking sender infrastructure.                             |
-| `alertSubjectKeyword` | Useful for finding phishing themes or lures.                           |
-| `alertThreatName`     | Useful for finding messages tied to the same detection or campaign.    |
-
-If you leave every variable blank, the query returns the latest 200 email events from the last 7 days. That is fine for learning the table, but it is too broad for focused alert triage.
 
 ---
 
