@@ -138,7 +138,47 @@ Alternative `where` lines you can swap in:
 |   `1102` | Security audit log cleared  | High-priority evidence tampering indicator.                                         |
 |     `21` | RDP session logon           | Terminal Services session activity, if collected.                                   |
 
----
+---  
+
+## Logon Types
+
+| LogonType | Name                    | What it usually means                                                                                                                                      | Why it matters in triage                                                                                                  |
+| --------: | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+|       `2` | Interactive             | User logged on locally at the keyboard or console.                                                                                                         | Normal for users at their own workstation, but suspicious on servers or sensitive systems.                                |
+|       `3` | Network                 | Access over the network, such as SMB, file shares, remote service access, or lateral movement.                                                             | Very important for lateral movement investigations. Watch for unusual source IPs or accounts.                             |
+|       `4` | Batch                   | Logon used by scheduled tasks or batch jobs.                                                                                                               | Can be normal, but review if tied to suspicious scheduled tasks or unexpected accounts.                                   |
+|       `5` | Service                 | Logon used by a Windows service.                                                                                                                           | Normal for service accounts, but suspicious if an unusual account is used as a service.                                   |
+|       `7` | Unlock                  | User unlocked an existing logged-on session.                                                                                                               | Useful for timeline context, especially around physical or interactive access.                                            |
+|       `8` | NetworkCleartext        | Network logon where credentials may be sent in cleartext to the authentication package.                                                                    | Higher-risk. Review carefully, especially if seen from unusual systems or accounts.                                       |
+|       `9` | NewCredentials          | Credentials were specified using a tool like `runas /netonly`. Local session remains the same, but outbound network connections use different credentials. | Important for credential misuse and lateral movement review.                                                              |
+|      `10` | RemoteInteractive       | Remote interactive logon, usually RDP.                                                                                                                     | Very important for RDP investigations. Watch for unusual source IPs, public IPs, admin accounts, or after-hours activity. |
+|      `11` | CachedInteractive       | User logged on using cached domain credentials, usually when a domain controller was unavailable.                                                          | Can be normal for laptops, but useful when checking offline or disconnected logons.                                       |
+|      `12` | CachedRemoteInteractive | Cached credentials used for a remote interactive logon.                                                                                                    | Less common. Review carefully if seen during suspicious remote access activity.                                           |
+|      `13` | CachedUnlock            | Unlock of a session using cached credentials.                                                                                                              | Usually timeline/context data, but may help confirm user activity when domain connectivity was unavailable.               |
+
+### Quick triage notes
+
+| Focus                            | Logon types to review                                                     |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| Local console activity           | `2`, `7`, `11`, `13`                                                      |
+| Lateral movement                 | `3`, `9`, `10`                                                            |
+| RDP activity                     | `10`                                                                      |
+| Scheduled task activity          | `4`                                                                       |
+| Service account activity         | `5`                                                                       |
+| Suspicious credential usage      | `8`, `9`, `10`                                                            |
+| Brute force or password spraying | Usually `4625` events with repeated `LogonType` values, often `3` or `10` |
+
+### Beginner reminder
+
+For most SOC triage, pay closest attention to:
+
+**`3` = Network logon**
+**`10` = RDP / RemoteInteractive logon**
+**`9` = NewCredentials / possible alternate credential use**
+**`5` = Service logon**
+**`4` = Scheduled task or batch logon**
+
+--- 
 
 ## Do not use this table for
 
