@@ -33,7 +33,7 @@ Use `DeviceProcessEvents` when investigating:
 
 Use this as your first-pass query. Fill in whichever artifact you have and leave the others blank.
 
-```kql id="z235lz"
+```kql 
 let lookback = 7d;
 let alertDeviceName = "";
 let alertFileName = "";
@@ -69,7 +69,7 @@ Use this shorter version when pasting KQL into a Sentinel incident comment.
 
 Prioritize `DeviceName` + `FileName` or `ProcessCommandLine` when investigating a specific process on an endpoint. Use `SHA1` when investigating a known malicious binary. Use `LogonId` when tying process execution to a specific user session.
 
-```kql id="zxsmr8"
+```kql 
 DeviceProcessEvents
 | where Timestamp >= ago(7d)
 | where DeviceName =~ "<device-name>"
@@ -80,7 +80,7 @@ DeviceProcessEvents
 
 Alternative `where` lines you can swap in:
 
-```kql id="6dj1zc"
+```kql 
 | where SHA1 =~ "<SHA1>"
 | where FolderPath contains "<path keyword>"
 | where ProcessCommandLine contains "<command keyword>"
@@ -94,10 +94,27 @@ Alternative `where` lines you can swap in:
 | where ProcessIntegrityLevel =~ "<Low/Medium/High/System>"
 ```
 
-```kql id="pivnae"
+```kql 
 // Purpose: Shows process execution so I can confirm what ran, who ran it, the full command line, parent process context, hash, privilege level, and session identifiers for pivoting.
 ```
+> Pivot on execution to see the sequence of events leading up to and after execution
+```kql
+let Host = "HOSTNAME";
+let AlertTime = datetime(2026-07-07T12:00:00Z);
 
+DeviceProcessEvents
+| where Timestamp between (AlertTime - 10m .. AlertTime + 10m)
+| where DeviceName =~ Host
+| project
+    Timestamp,
+    AccountName,
+    ParentProcess = InitiatingProcessFileName,
+    Process = FileName,
+    ProcessCommandLine,
+    SHA1
+| order by Timestamp asc
+
+```
 ---
 
 ## Key fields
