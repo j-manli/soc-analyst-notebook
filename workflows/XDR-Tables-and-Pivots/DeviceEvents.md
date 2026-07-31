@@ -139,6 +139,43 @@ Alternative `where` lines you can swap in depending on the alert artifact:
 | where ProcessTokenElevation =~ "<Full>"
 ```
 
+## Network Protection Blocks and User Bypass
+
+Microsoft Defender may record both an initial Network Protection block and a later user bypass for the same destination. A block event alone does not always mean access remained prevented.
+
+```kusto
+DeviceEvents
+| where DeviceName has "HOSTNAME"
+| where ActionType contains "NetworkProtection"
+| project
+    Timestamp,
+    ActionType,
+    RemoteUrl,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    AdditionalFields
+| order by Timestamp asc
+```
+
+### Events to Review
+
+* `ExploitGuardNetworkProtectionBlocked` — Network Protection blocked or warned on the connection.
+* `NetworkProtectionUserBypassEvent` — the user selected an option to bypass the warning and continue.
+* Subsequent browser or network activity — helps determine whether the destination was accessed after the bypass.
+
+### Triage Notes
+
+Confirm the following before concluding that access was prevented:
+
+* Destination URL or domain
+* Initiating process and command line
+* Network Protection response category
+* Whether a user-bypass event occurred
+* Whether additional connections occurred after the bypass
+
+> A Network Protection block may be followed by a user bypass. Review the full event sequence before determining whether access remained blocked.
+
+
 Field priority for this table:
 
 | Priority | Artifact                                                     | Why                                                                                                            |
