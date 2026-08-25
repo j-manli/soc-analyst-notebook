@@ -1,14 +1,14 @@
-# Endpoint Alert Triage Runbook
+# Endpoint Triage Runbook
 
 ## Purpose
 
-Use this runbook as the default workflow for Microsoft Defender endpoint alerts.
+Use this runbook as the default workflow for Microsoft Defender for Endpoint alert triage.
 
 The goal is to answer:
 
 > **What happened, is it expected, did anything suspicious happen around it, and is the activity isolated or part of something larger?**
 
-Follow the steps in order. Only branch into additional queries when the evidence gives you a reason.
+Follow the steps in order. Only open additional query pages when the evidence gives you a reason.
 
 ---
 
@@ -26,7 +26,7 @@ Alerting Process:
 Process ID:
 Process Creation Time:
 Command Line:
-File / Hash:
+File / SHA1:
 IP / Domain:
 ```
 
@@ -38,9 +38,7 @@ IP / Domain:
 * Could there be a legitimate explanation?
 * Are there related alerts or affected entities?
 
-## Why
-
-You need to understand the alerting behavior before surrounding telemetry will be meaningful.
+Do not start hunting blindly. First understand what you are trying to validate.
 
 ---
 
@@ -48,11 +46,11 @@ You need to understand the alerting behavior before surrounding telemetry will b
 
 Run:
 
-**[Endpoint Context Timeline](../Queries/01-Endpoint-Context-Timeline.md)**
+**[Endpoint Context Timeline](01-Endpoint-Context-Timeline.md)**
 
 This should usually be your first hunting query.
 
-It provides a chronological view of:
+It reviews:
 
 * Process activity
 * Network activity
@@ -67,39 +65,13 @@ It provides a chronological view of:
 
 ## Look For
 
-### Process
-
-* Unexpected process creation
-* Suspicious parent/child relationships
-* PowerShell, CMD, scripting, or LOLBin activity
-* Encoded or obfuscated command lines
-* Executables running from unusual locations
-
-### Network
-
-* Unexpected external connections
-* Unusual domains or IP addresses
-* Connections immediately after process execution
-* Internal connections that may indicate lateral movement
-
-### Files
-
-* Executables, DLLs, scripts, or archives being created
-* Files created in unusual locations
-* Potential payload downloads
-
-### Registry
-
-* Run keys
-* Startup changes
-* Security-setting changes
-* Other possible persistence
-
-### Logons
-
-* Unexpected accounts
-* Remote logons
-* Accounts that normally should not access the device
+* Suspicious or unusual processes
+* Strange command lines
+* Unexpected outbound connections
+* File creation
+* Registry changes
+* Unexpected logons
+* Follow-on activity after the alert
 
 ---
 
@@ -109,54 +81,51 @@ After reviewing the timeline, ask:
 
 > **Did I find anything that needs a closer look?**
 
-## If No
+### If No
 
-If the alerting activity appears legitimate and surrounding telemetry is consistent with that explanation, continue toward disposition.
+If the alerting behavior can be explained and surrounding telemetry appears consistent with that explanation, continue toward disposition.
 
 Example analyst note:
 
 > Review of endpoint telemetry surrounding the alert did not identify suspicious process creation, command-line activity, network connections, file activity, logons, or registry changes within the reviewed time window.
 
-Do not treat a clean timeline as proof that nothing malicious occurred. It is supporting evidence within the telemetry and time range reviewed.
+A clean timeline supports your assessment but does not prove that nothing malicious occurred.
 
----
+### If Yes
 
-## If Yes
+Use the suspicious activity to choose the next query.
 
-Pivot based on the suspicious entity.
+| What You Found                                     | Next Query                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------- |
+| Suspicious or unusual process                      | [Process Activity Pivot](02-Process-Activity-Pivot.md)                     |
+| Network connection followed by file creation       | [Network to File Correlation](03-Network-to-File-Correlation.md)           |
+| Unexpected inbound connection                      | [Inbound Connection Source](04-Inbound-Connection-Source.md)               |
+| Suspicious hash, IP, domain, file, or command line | [Indicator Environment Sweep](05-Indicator-Environment-Sweep.md)           |
+| Suspicious outbound network activity               | [Outbound Network Activity](06-Outbound-Network-Activity.md)               |
+| Possible persistence or security changes           | [Persistence and Security Changes](07-Persistence-and-Security-Changes.md) |
+| Unknown or suspicious file                         | [File Trust and Prevalence Check](08-File-Trust-and-Prevalence-Check.md)   |
 
-| Finding                              | Next Query                                                                  |
-| ------------------------------------ | --------------------------------------------------------------------------- |
-| Suspicious process                   | [Process Activity Pivot](../Queries/02-Process-Activity-Pivot.md)           |
-| Network followed by file creation    | [Network to File Correlation](../Queries/03-Network-to-File-Correlation.md) |
-| Suspicious inbound connection        | [Inbound Connection Source](../Queries/04-Inbound-Connection-Source.md)     |
-| Suspicious IP, domain, hash, or file | [Indicator Environment Sweep](../Queries/05-Indicator-Environment-Sweep.md) |
+Do **not** run all of these automatically.
 
-Do not run every query automatically.
+Ask:
 
-Run the query that answers your **next investigative question**.
+> **What question do I need to answer next?**
+
+Then use the query designed to answer it.
 
 ---
 
 # 4. Investigate Suspicious Processes
 
-If a process appears suspicious, run:
+If a process looks suspicious, run:
 
-**[Process Activity Pivot](../Queries/02-Process-Activity-Pivot.md)**
+**[Process Activity Pivot](02-Process-Activity-Pivot.md)**
 
 ## Ask
 
 > **What did this exact process do?**
 
-Whenever possible, identify the process using:
-
-```text
-Device ID
-Process ID
-Process Creation Time
-```
-
-## Look For
+Look for:
 
 * Parent process
 * Child processes
@@ -164,62 +133,71 @@ Process Creation Time
 * Network connections
 * Files created
 * Registry modifications
-* Additional device events
+* Additional endpoint events
 
-## Example
-
-```text
-WINWORD.EXE
-     ↓
-powershell.exe
-     ↓
-External connection
-     ↓
-payload.dll created
-     ↓
-rundll32.exe
-```
-
-A process name by itself may be benign.
-
-The behavior surrounding it is often what determines whether it is suspicious.
+A process name by itself may be benign. Its behavior is usually more important.
 
 ---
 
-# 5. Investigate Possible Downloads
+# 5. Investigate Network Activity
 
-If a process made a network connection and then created a suspicious file, run:
+If the timeline shows unusual outbound communication, run:
 
-**[Network to File Correlation](../Queries/03-Network-to-File-Correlation.md)**
+**[Outbound Network Activity](06-Outbound-Network-Activity.md)**
 
 ## Ask
 
-> **Did this process make a network connection and create a possible downloaded file shortly afterward?**
+> **What did this device connect to, and which process/user initiated it?**
 
-## Look For
+Look for:
 
-* Remote IP or domain
-* File name
-* File location
-* File hash
-* Time between network activity and file creation
-* Whether the file was later executed
+* Unexpected IP addresses or domains
+* Unusual destination ports
+* Suspicious processes making connections
+* Script interpreters or LOLBins communicating externally
+* Repeated connections to the same destination
+* Internal connections that may represent lateral movement
 
-Remember that timing correlation supports a download hypothesis but does not prove that the file contents came from that specific connection.
+If the destination looks suspicious, scope it with:
+
+**[Indicator Environment Sweep](05-Indicator-Environment-Sweep.md)**
 
 ---
 
-# 6. Investigate Inbound Connections
+# 6. Investigate Possible Downloads
 
-If the alerted endpoint accepted an unexpected inbound connection, run:
+If a process made a network connection and created a file shortly afterward, run:
 
-**[Inbound Connection Source](../Queries/04-Inbound-Connection-Source.md)**
+**[Network to File Correlation](03-Network-to-File-Correlation.md)**
+
+## Ask
+
+> **Did this process potentially download or create a file following network activity?**
+
+Look for:
+
+* Remote IP or domain
+* Created file
+* File path
+* SHA1
+* File origin
+* Time between connection and file creation
+
+Remember that timing correlation supports a download hypothesis but does not prove that a specific connection supplied the file.
+
+---
+
+# 7. Investigate Inbound Connections
+
+If the device accepted an unexpected inbound connection, run:
+
+**[Inbound Connection Source](04-Inbound-Connection-Source.md)**
 
 ## Ask
 
 > **Which internal device and process initiated this connection?**
 
-This can be useful for investigating:
+Useful for:
 
 * SMB
 * RDP
@@ -227,7 +205,7 @@ This can be useful for investigating:
 * Remote administration
 * Potential lateral movement
 
-## Look For
+Review:
 
 * Source device
 * Source IP
@@ -236,77 +214,122 @@ This can be useful for investigating:
 * Command line
 * User account
 
-Then determine whether the source device, user, process, and destination make sense together.
+Determine whether the source device, process, user, and destination make sense together.
 
 ---
 
-# 7. Scope Suspicious Indicators
+# 8. Check Suspicious Files
 
-If you identify a suspicious:
+If you identify an unknown or suspicious file, run:
 
-* Hash
-* File
-* IP
-* Domain
-* Command line
-* Other IOC
-
-run:
-
-**[Indicator Environment Sweep](../Queries/05-Indicator-Environment-Sweep.md)**
+**[File Trust and Prevalence Check](08-File-Trust-and-Prevalence-Check.md)**
 
 ## Ask
 
-> **Is this activity isolated to this endpoint or present elsewhere in the environment?**
+> **Is this file signed and trusted, and how common is it in the environment?**
 
-## Look For
+Review:
 
-* Other affected devices
-* Other users
-* Same file/hash elsewhere
-* Other systems contacting the same infrastructure
-* First and last observed activity
-* Frequency of the activity
+* Signature status
+* Trust status
+* Signer
+* Issuer
+* Device prevalence
+* File paths
+* First/last seen
+* Download origin
 
-## Why
-
-There is a major difference between:
-
-```text
-1 affected device
-```
-
-and:
+Remember:
 
 ```text
-25 affected devices
+Signed ≠ automatically safe
+Unsigned ≠ automatically malicious
+Common ≠ automatically safe
+Rare ≠ automatically malicious
 ```
 
-Scoping helps determine whether you are dealing with an isolated event or potentially broader activity.
+Use file reputation together with process behavior and surrounding telemetry.
 
 ---
 
-# 8. Reassess the Alert
+# 9. Check for Persistence or Security Changes
+
+If suspicious code executed successfully, or the alert appears significant enough to warrant a deeper check, run:
+
+**[Persistence and Security Changes](07-Persistence-and-Security-Changes.md)**
+
+## Ask
+
+> **Did the activity establish persistence or weaken endpoint security?**
+
+Look for:
+
+* Scheduled tasks
+* Services
+* Registry autoruns
+* Startup changes
+* Defender changes
+* Tamper-related events
+* Firewall changes
+* Suspicious use of `schtasks.exe`, `sc.exe`, or `reg.exe`
+
+This is especially important when malware or attacker-controlled code may have executed.
+
+---
+
+# 10. Scope Suspicious Indicators
+
+If you identify a suspicious:
+
+* SHA1
+* File name
+* IP address
+* Domain
+* Command-line fragment
+
+run:
+
+**[Indicator Environment Sweep](05-Indicator-Environment-Sweep.md)**
+
+## Ask
+
+> **Is this activity isolated to this endpoint or present elsewhere?**
+
+Look for:
+
+* Other affected devices
+* Other users
+* Same hash/file elsewhere
+* Other systems communicating with the same infrastructure
+* Frequency
+* First and last observed activity
+
+The difference between one affected endpoint and many can significantly change the severity of the investigation.
+
+---
+
+# 11. Reassess the Alert
 
 After completing the relevant pivots, return to the original alert.
 
 Ask:
 
 * Can I explain why the alert fired?
-* Does the explanation fit the surrounding telemetry?
-* Did the alerting process perform suspicious follow-on activity?
+* Does that explanation fit the surrounding telemetry?
+* Did the process perform suspicious follow-on activity?
 * Did it communicate with suspicious infrastructure?
 * Did it create or execute suspicious files?
 * Was persistence observed?
+* Were security controls modified?
 * Was lateral movement observed?
-* Does the activity exist elsewhere?
+* Does the same activity appear elsewhere?
 * Is there anything I still cannot explain?
 
-If something remains unclear, identify the specific unanswered question and investigate that question.
+If something remains unclear, identify the **specific unanswered question** and investigate that question.
 
 ---
 
-# 9. Make the Disposition
+# 12. Make the Disposition
 
 ## Likely Benign
 
@@ -315,12 +338,12 @@ You should generally be able to explain:
 * Why the alert triggered
 * Why the behavior is legitimate
 * Which user/process caused it
-* Why the surrounding activity is expected
-* That no relevant suspicious follow-on activity was identified in the telemetry reviewed
+* Why surrounding activity is expected
+* That no relevant suspicious follow-on activity was identified within the telemetry reviewed
 
 Example:
 
-> The alerting activity appears consistent with legitimate behavior. Review of surrounding endpoint telemetry did not identify additional suspicious process, network, file, logon, or registry activity within the reviewed time window.
+> The alerting activity appears consistent with legitimate behavior. Review of surrounding endpoint telemetry did not identify additional suspicious process, network, file, logon, registry, persistence, or security-impacting activity within the reviewed time window.
 
 ---
 
@@ -334,26 +357,24 @@ Use this when:
 * Activity is unusual but not clearly malicious
 * Additional validation is required
 
-Document the unanswered question.
-
-Example:
-
-> PowerShell activity remains unexplained. Additional investigation is required to determine the purpose of the observed outbound connection and subsequent file creation.
+Document the specific unanswered question.
 
 ---
 
 ## Suspicious / Escalate
 
-Examples of evidence that may support escalation include:
+Examples of evidence that may support escalation:
 
 * Malicious or highly suspicious command lines
 * Suspicious process chains
 * Payload download followed by execution
-* Credential access behavior
+* Suspicious external communication
+* Credential activity
 * Persistence
+* Security-control modification
 * Lateral movement
 * Known malicious infrastructure
-* Suspicious indicators appearing across multiple endpoints
+* Suspicious indicators across multiple endpoints
 
 Document the sequence of events and supporting evidence.
 
@@ -362,48 +383,89 @@ Document the sequence of events and supporting evidence.
 # Quick Reference
 
 ```text
-START
-  │
-  ▼
-Understand the alert
-  │
-  ▼
-Run Endpoint Context Timeline
-  │
-  ▼
-Anything suspicious?
-  │
-  ├── No
-  │    │
-  │    ▼
-  │  Validate explanation
-  │    │
-  │    ▼
-  │  Scope if warranted
-  │
-  └── Yes
-       │
-       ├── Process
-       │      ↓
-       │   Process Activity Pivot
-       │
-       ├── Network → File
-       │      ↓
-       │   Network to File Correlation
-       │
-       ├── Inbound Connection
-       │      ↓
-       │   Inbound Connection Source
-       │
-       └── IOC
-              ↓
-          Indicator Environment Sweep
-
-              ↓
-          Reassess evidence
-              ↓
-           DISPOSITION
+                         ALERT
+                           │
+                           ▼
+                  Understand why it fired
+                           │
+                           ▼
+                 Endpoint Context Timeline
+                           │
+                  Anything suspicious?
+                     /            \
+                   NO              YES
+                   │                │
+                   │                ├─ Process
+                   │                │     ↓
+                   │                │  Process Activity Pivot
+                   │                │
+                   │                ├─ Outbound network
+                   │                │     ↓
+                   │                │  Outbound Network Activity
+                   │                │
+                   │                ├─ Network → File
+                   │                │     ↓
+                   │                │  Network to File Correlation
+                   │                │
+                   │                ├─ Inbound connection
+                   │                │     ↓
+                   │                │  Inbound Connection Source
+                   │                │
+                   │                ├─ Suspicious file
+                   │                │     ↓
+                   │                │  File Trust / Prevalence
+                   │                │
+                   │                ├─ Persistence/security change
+                   │                │     ↓
+                   │                │  Persistence Check
+                   │                │
+                   │                └─ IOC
+                   │                      ↓
+                   │                 Environment Sweep
+                   │
+                   └───────────────┬───────────────
+                                   ▼
+                              Reassess
+                                   │
+                                   ▼
+                               DISPOSITION
 ```
+
+---
+
+# Query Library
+
+### 1. [Endpoint Context Timeline](01-Endpoint-Context-Timeline.md)
+
+**Question:** What happened around the alert?
+
+### 2. [Process Activity Pivot](02-Process-Activity-Pivot.md)
+
+**Question:** What did this process do?
+
+### 3. [Network to File Correlation](03-Network-to-File-Correlation.md)
+
+**Question:** Did this process potentially download or create a file after network activity?
+
+### 4. [Inbound Connection Source](04-Inbound-Connection-Source.md)
+
+**Question:** Which internal device initiated this inbound connection?
+
+### 5. [Indicator Environment Sweep](05-Indicator-Environment-Sweep.md)
+
+**Question:** Does this indicator appear elsewhere?
+
+### 6. [Outbound Network Activity](06-Outbound-Network-Activity.md)
+
+**Question:** What did this endpoint connect to, and what initiated the connection?
+
+### 7. [Persistence and Security Changes](07-Persistence-and-Security-Changes.md)
+
+**Question:** Did this activity establish persistence or weaken security controls?
+
+### 8. [File Trust and Prevalence Check](08-File-Trust-and-Prevalence-Check.md)
+
+**Question:** Is this file signed/trusted, and how common is it?
 
 ---
 
@@ -415,9 +477,9 @@ Do not ask:
 
 Ask:
 
-> **What question do I need to answer next?**
+> **What investigative question do I need to answer next?**
 
-Then use the query designed to answer that question.
+Then use the query designed to answer it.
 
 ```text
 "What happened around the alert?"
@@ -426,20 +488,29 @@ Then use the query designed to answer that question.
 "What did this process do?"
 → Process Activity Pivot
 
-"Did this process possibly download something?"
+"What did this endpoint connect to?"
+→ Outbound Network Activity
+
+"Did this process potentially download something?"
 → Network to File Correlation
 
-"Who connected to this device?"
+"Who connected to this endpoint?"
 → Inbound Connection Source
 
-"Is this indicator present elsewhere?"
+"Is this file legitimate or unusual?"
+→ File Trust and Prevalence Check
+
+"Did this establish persistence?"
+→ Persistence and Security Changes
+
+"Does this indicator exist elsewhere?"
 → Indicator Environment Sweep
 ```
 
-Broad queries are used to **discover** interesting activity.
+Use broad queries to **discover**.
 
-Targeted queries are used to **validate** it.
+Use targeted queries to **validate**.
 
-Environment-wide searches are used to **scope** it.
+Use environment-wide searches to **scope**.
 
-The evidence gathered from those steps is then used to make the final disposition.
+Use the combined evidence to make the final disposition.
