@@ -69,11 +69,18 @@ Use this shorter version when pasting KQL into a Sentinel incident comment.
 Prioritize `RemoteIP` or `RemoteUrl` when investigating known infrastructure. Use `DeviceName` + `InitiatingProcessFileName` when investigating what a specific endpoint or process connected to. Use `RemotePort` when investigating lateral movement, such as SMB, RDP, or WinRM.
 
 ```kql
+let EventTime = datetime(2026-09-22T12:00:00Z); // Replace with actual UTC event time
 DeviceNetworkEvents
-| where Timestamp >= ago(7d)
+| where Timestamp between ((EventTime - 30m) .. (EventTime + 30m))
 | where DeviceName =~ "<device-name>"
 | where RemoteIP == "<remote IP>"
-| project-reorder Timestamp, DeviceName, ActionType, RemoteIP, RemoteUrl, RemotePort, Protocol, InitiatingProcessFileName, InitiatingProcessCommandLine, LocalIP, LocalPort, RemoteIPType, InitiatingProcessSHA1, InitiatingProcessAccountName, InitiatingProcessIntegrityLevel
+| project-reorder Timestamp, DeviceName, RemoteIP, RemoteUrl, RemotePort,
+    ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine,
+    InitiatingProcessAccountDomain, InitiatingProcessAccountName,
+    InitiatingProcessFolderPath, InitiatingProcessParentFileName,
+    Protocol, LocalIP, LocalPort, RemoteIPType,
+    InitiatingProcessIntegrityLevel, InitiatingProcessSHA1,
+    InitiatingProcessId, InitiatingProcessCreationTime
 | order by Timestamp desc
 ```
 
