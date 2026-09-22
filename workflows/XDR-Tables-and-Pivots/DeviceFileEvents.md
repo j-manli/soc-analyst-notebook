@@ -70,12 +70,19 @@ Use this shorter version when pasting KQL into a Sentinel incident comment.
 
 Prioritize `SHA1` when investigating a known file hash. Use `DeviceName` + `FileName` or `FolderPath` when investigating a file on a specific endpoint. Use `ActionType` when investigating behavior such as creation, deletion, modification, or rename activity.
 
-```kql id="xfieqo"
+```kql
+let EventTime = datetime(2026-09-22T12:00:00Z); // Replace with actual UTC event time
 DeviceFileEvents
-| where Timestamp >= ago(7d)
+| where Timestamp between ((EventTime - 30m) .. (EventTime + 30m))
 | where DeviceName =~ "<device-name>"
 | where FileName =~ "<file-name>"
-| project-reorder Timestamp, DeviceName, ActionType, FileName, FolderPath, SHA1, FileOriginUrl, FileOriginIP, RequestProtocol, RequestSourceIP, RequestAccountName, ShareName, PreviousFileName, PreviousFolderPath, InitiatingProcessCommandLine, InitiatingProcessFileName, FileSize
+| project-reorder Timestamp, DeviceName, ActionType, FileName, FolderPath,
+    InitiatingProcessFileName, InitiatingProcessCommandLine,
+    InitiatingProcessAccountDomain, InitiatingProcessAccountName,
+    SHA1, FileSize, FileOriginUrl, FileOriginReferrerUrl, FileOriginIP,
+    PreviousFileName, PreviousFolderPath, RequestProtocol, RequestSourceIP,
+    RequestAccountDomain, RequestAccountName, ShareName,
+    InitiatingProcessFolderPath, InitiatingProcessId, InitiatingProcessCreationTime
 | order by Timestamp desc
 ```
 
