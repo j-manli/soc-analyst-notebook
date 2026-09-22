@@ -112,11 +112,19 @@ Use this shorter version when you need to paste the KQL you used into a Sentinel
 Prioritize `DeviceName` + `ActionType` when you know what device and behavior you are investigating. If the alert is process-driven, use `InitiatingProcessFileName`, `InitiatingProcessCommandLine`, or `InitiatingProcessSHA1`. If the alert is persistence-related, prioritize `ActionType`, `RegistryKey`, `RegistryValueName`, scheduled task actions, or service-related actions.
 
 ```kql
+let EventTime = datetime(2026-09-22T12:00:00Z); // Replace with actual UTC event time
 DeviceEvents
-| where Timestamp >= ago(7d)
+| where Timestamp between ((EventTime - 30m) .. (EventTime + 30m))
 | where DeviceName =~ "<device-name>"
 | where ActionType contains "<action type or keyword>"
-| project-reorder Timestamp, DeviceName, ActionType, RegistryKey, RegistryValueName, RegistryValueData, InitiatingProcessCommandLine, RemoteDeviceName, RemoteIP, AccountName, AccountDomain, InitiatingProcessFileName, InitiatingProcessSHA1, LogonId, InitiatingProcessLogonId, ProcessTokenElevation
+| project-reorder Timestamp, DeviceName, ActionType, AdditionalFields,
+    FileName, FolderPath, InitiatingProcessFileName, InitiatingProcessCommandLine,
+    InitiatingProcessAccountDomain, InitiatingProcessAccountName,
+    AccountDomain, AccountName, RemoteDeviceName, RemoteIP,
+    RegistryKey, RegistryValueName, RegistryValueData,
+    InitiatingProcessFolderPath, InitiatingProcessSHA1,
+    InitiatingProcessId, InitiatingProcessCreationTime,
+    LogonId, InitiatingProcessLogonId, ProcessTokenElevation
 | order by Timestamp desc
 ```
 
