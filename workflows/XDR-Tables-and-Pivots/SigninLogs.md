@@ -82,7 +82,7 @@ SigninLogs
 | where TimeGenerated between ((EventTime - 1h) .. (EventTime + 1h))
 | where UserPrincipalName =~ TargetUser
 | extend AuthenticationDetails = todynamic(AuthenticationDetails)
-| project-reorder CreatedDateTime, UserPrincipalName, ResultType, ResultDescription,
+| project-reorder CreatedDateTime, UserPrincipalName, ResultType, ResultSignature, ResultDescription,
     IPAddress, LocationDetails, AutonomousSystemNumber,
     AppDisplayName, ResourceDisplayName, DeviceDetail, UserAgent,
     IsInteractive, AuthenticationProtocol, AuthenticationDetails,
