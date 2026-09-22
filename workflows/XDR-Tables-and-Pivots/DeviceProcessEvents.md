@@ -70,11 +70,17 @@ Use this shorter version when pasting KQL into a Sentinel incident comment.
 Prioritize `DeviceName` + `FileName` or `ProcessCommandLine` when investigating a specific process on an endpoint. Use `SHA1` when investigating a known malicious binary. Use `LogonId` when tying process execution to a specific user session.
 
 ```kql 
+let EventTime = datetime(2026-09-22T12:00:00Z); // Replace with actual UTC event time
 DeviceProcessEvents
-| where Timestamp >= ago(7d)
+| where Timestamp between ((EventTime - 30m) .. (EventTime + 30m))
 | where DeviceName =~ "<device-name>"
 | where FileName =~ "<process.exe>"
-| project-reorder Timestamp, DeviceName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessParentFileName, SHA1, AccountName, AccountDomain, ProcessTokenElevation, ProcessIntegrityLevel, ProcessId, InitiatingProcessId, LogonId, ProcessVersionInfoCompanyName
+| project-reorder Timestamp, DeviceName, FileName, ProcessCommandLine,
+    AccountDomain, AccountName, InitiatingProcessFileName, InitiatingProcessCommandLine,
+    InitiatingProcessParentFileName, ProcessTokenElevation, ProcessIntegrityLevel,
+    FolderPath, InitiatingProcessFolderPath, SHA1, ProcessId, ProcessCreationTime,
+    InitiatingProcessId, InitiatingProcessCreationTime, LogonId, ActionType,
+    ProcessVersionInfoCompanyName
 | order by Timestamp desc
 ```
 
