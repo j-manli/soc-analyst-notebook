@@ -75,12 +75,20 @@ Use this shorter version when pasting KQL into a Sentinel incident comment.
 
 Prioritize `UserPrincipalName` when investigating a specific account. Use `IPAddress` for source infrastructure, `ResultType` for success/failure filtering, and `AppDisplayName` when the alert is tied to a specific cloud application.
 
-```kql id="5u4nis"
+```kql 
+let TargetUser = "user@contoso.com";
+let EventTime = datetime(2026-09-22T12:00:00Z); // Replace with actual UTC event time
 SigninLogs
-| where TimeGenerated >= ago(7d)
-| where UserPrincipalName =~ "<user@domain.com>"
-| project-reorder TimeGenerated, UserPrincipalName, IPAddress, ResultType, ConditionalAccessStatus, AuthenticationRequirement, RiskState, RiskLevelDuringSignIn, AppDisplayName, Location, LocationDetails, IsInteractive, AuthenticationDetails, ConditionalAccessPolicies, DeviceDetail
-| order by TimeGenerated desc
+| where TimeGenerated between ((EventTime - 1h) .. (EventTime + 1h))
+| where UserPrincipalName =~ TargetUser
+| extend AuthenticationDetails = todynamic(AuthenticationDetails)
+| project-reorder CreatedDateTime, UserPrincipalName, ResultType, ResultDescription,
+    IPAddress, LocationDetails, AutonomousSystemNumber,
+    AppDisplayName, ResourceDisplayName, DeviceDetail, UserAgent,
+    IsInteractive, AuthenticationProtocol, AuthenticationDetails,
+    ConditionalAccessStatus, RiskLevelDuringSignIn, RiskLevelAggregated,
+    RiskEventTypes_V2, SessionId, Id
+| order by CreatedDateTime asc
 ```
 
 Alternative `where` lines you can swap in:
